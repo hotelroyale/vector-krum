@@ -1,0 +1,40 @@
+{
+  "name": "vector-krum",
+  "version": "0.1.0",
+  "description": "Bitmap-to-vector tracing: PNG/JPEG in, SVG out",
+  "type": "module",
+  "bin": {
+    "vectorize": "dist/cli.js",
+    "vectorize-wizard": "dist/wizard-cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --exclude test/reference.test.ts",
+    "vectorize": "tsx src/cli.ts",
+    "wizard": "tsx src/wizard-cli.ts",
+    "test:reference": "vitest run test/reference.test.ts",
+    "ui": "vite --config ui/vite.config.ts",
+    "ui:build": "vite build --config ui/vite.config.ts",
+    "ui:preview": "vite preview --config ui/vite.config.ts",
+    "ui:typecheck": "tsc -p ui/tsconfig.json"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.3",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^26.6.5",
+    "@types/pngjs": "^6.0.5",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "sass": "^1.105.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3",
+    "vue": "^3.5.43"
+  }
+}
