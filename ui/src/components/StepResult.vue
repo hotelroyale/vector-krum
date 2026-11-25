@@ -2,8 +2,10 @@
 import { computed, reactive, watch } from 'vue';
 import type { Quality } from '../../../src/browser';
 import type { ColorMode } from '../store';
-import { state, rerun, goTo, downloadSvg, loadSuggestions } from '../store';
+import { state, rerun, goTo, downloadSvg, loadSuggestions, editedSvg, removedSet, undoRemove, restoreShapes } from '../store';
 import Swatch from './Swatch.vue';
+
+const ERASER_ICON = 'M8.5 20.5 3.9 15.9a2 2 0 0 1 0-2.8l9.2-9.2a2 2 0 0 1 2.8 0l4.2 4.2a2 2 0 0 1 0 2.8L11.5 19.5M8.5 20.5H20.5M7.5 9.5l7 7';
 
 const DETAIL: { value: Quality; name: string; title: string }[] = [
   { value: 2, name: 'High', title: 'Preserve as many details as possible.' },
@@ -12,7 +14,7 @@ const DETAIL: { value: Quality; name: string; title: string }[] = [
 ];
 
 const stats = computed(() => {
-  const svg = state.result?.svg;
+  const svg = editedSvg.value;
   if (!svg) return null;
   const fills = new Set(svg.match(/<path fill="#[0-9a-f]{6}/g) ?? []);
   const paths = (svg.match(/<path fill="#/g) ?? []).length;
@@ -89,6 +91,23 @@ function apply() {
         Download SVG
       </button>
     </div>
+
+    <section>
+      <h2 class="section-title">Remove shapes</h2>
+      <div class="erase">
+        <button class="btn" :class="{ active: state.erasing }" :disabled="!state.result || state.busy" title="Remove shapes (E)" @click="state.erasing = !state.erasing">
+          <svg class="eraser-icon" viewBox="0 0 24 24" aria-hidden="true"><path :d="ERASER_ICON" /></svg>
+          {{ state.erasing ? 'Done' : 'Select shapes to remove' }}
+        </button>
+        <button class="btn" :disabled="!state.removed.length" title="Undo (⌘Z / Ctrl+Z)" @click="undoRemove">Undo</button>
+        <button class="btn ghost" :disabled="!state.removed.length" @click="restoreShapes">Restore all</button>
+      </div>
+      <p class="hint">
+        <template v-if="removedSet.size">{{ removedSet.size }} {{ removedSet.size === 1 ? 'shape' : 'shapes' }} removed. </template>
+        {{ state.erasing ? 'Click shapes in the vector view to remove them; Shift-click removes every shape of that color.' : 'Remove unwanted shapes, e.g. specks or background, from the SVG.' }}
+        Changing the settings below starts over.
+      </p>
+    </section>
 
     <section>
       <h2 class="section-title">Detail level</h2>
@@ -214,6 +233,27 @@ function apply() {
 @keyframes spin {
   to {
     rotate: 1turn;
+  }
+}
+
+.eraser-icon {
+  width: 16px;
+  flex: none;
+  max-width: none;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.erase {
+  display: flex;
+  gap: 6px;
+
+  .btn:first-child {
+    flex: 1;
   }
 }
 

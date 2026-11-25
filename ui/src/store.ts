@@ -2,6 +2,7 @@
 import { computed, markRaw, reactive, watch } from 'vue';
 import type { Color, ImageInfo, ImageType, Quality, SuggestedPalette, Transparency } from '../../src/browser';
 import { Cancelled, Engine } from './engine';
+import { parseSvg, writeSvg } from './shapes';
 import type { VectorResult, WorkerOptions } from './protocol';
 
 export type Step = 'start' | 'type' | 'quality' | 'transparency' | 'colors' | 'palette' | 'result';
@@ -47,6 +48,11 @@ export const state = reactive({
   resultOptions: null as WorkerOptions | null,
   busy: false,
   stage: '',
+
+  /** Result page: clicking a shape in the vector view removes it. */
+  erasing: false,
+  /** Shapes removed from the result, one group per removal step (for undo). */
+  removed: [] as number[][],
 
   view: 'bitmap' as ViewMode,
   showPaths: false,
@@ -216,9 +222,41 @@ export function rerun(change: () => void) {
   vectorize();
 }
 
+/** The result split into removable shapes. */
+export const parsedResult = computed(() => (state.result ? markRaw(parseSvg(state.result.svg)) : null));
+export const removedSet = computed(() => new Set(state.removed.flat()));
+/** The result without the removed shapes. */
+export const editedSvg = computed(() => {
+  if (!state.result || !parsedResult.value) return '';
+  return state.removed.length ? writeSvg(parsedResult.value, removedSet.value) : state.result.svg;
+});
+
+/** Removes a shape; with `sameColor`, every remaining shape of its color. */
+export function removeShape(index: number, sameColor = false) {
+  const shapes = parsedResult.value?.shapes;
+  const removed = removedSet.value;
+  if (!shapes || index < 0 || removed.has(index)) return;
+  const fill = shapes[index].fill;
+  const group = sameColor ? [...shapes.keys()].filter((i) => shapes[i].fill === fill && !removed.has(i)) : [index];
+  // The background rectangle underlays the largest shape (the first one drawn) in its color;
+  // removing that shape would otherwise leave it visible as if nothing happened.
+  const bg = shapes.findIndex((s) => s.background);
+  const largest = shapes.findIndex((s) => !s.background);
+  if (bg >= 0 && !removed.has(bg) && group.includes(largest) && shapes[bg].fill === shapes[largest].fill && !group.includes(bg)) group.push(bg);
+  state.removed.push(group);
+}
+
+export function undoRemove() {
+  state.removed.pop();
+}
+
+export function restoreShapes() {
+  state.removed = [];
+}
+
 export function downloadSvg() {
   if (!state.result || !state.image) return;
-  const blob = new Blob([state.result.svg], { type: 'image/svg+xml' });
+  const blob = new Blob([editedSvg.value], { type: 'image/svg+xml' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = state.image.name.replace(/\.[^.]+$/, '') + '.svg';
@@ -236,6 +274,27 @@ export function pixelColor(x: number, y: number): Color | null {
   const o = (yi * img.width + xi) * 4;
   return [img.data[o] / 255, img.data[o + 1] / 255, img.data[o + 2] / 255, img.data[o + 3] / 255];
 }
+
+// Removed shapes refer to one result; a new result (or image) starts unedited.
+watch(
+  () => state.result,
+  () => {
+    state.removed = [];
+  },
+);
+// Shapes are removed in the vector view.
+watch(
+  () => state.erasing,
+  (on) => {
+    if (on && state.view === 'bitmap') state.view = 'vector';
+  },
+);
+watch(
+  () => state.step,
+  (step) => {
+    if (step !== 'result') state.erasing = false;
+  },
+);
 
 // Palette suggestions depend on type, quality and transparency: recompute when those change.
 watch(
