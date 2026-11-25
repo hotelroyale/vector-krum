@@ -138,4 +138,8 @@ The color reference passes every check except the fragment count: the tips of th
 break into specks in the test's non-anti-aliased render, 136 against 103 (limit 134). The B/W scan
 still fails in its cross-hatched areas, which the reference renders as solid blobs with round holes.
 
+### Disclaimer
+
+This project and it's code is just for educational purpose. Commercial use is not allowed.  
+
 [Link]: https://hotelroyale.github.io/vector-krum/
