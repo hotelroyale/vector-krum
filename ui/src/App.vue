@@ -31,7 +31,7 @@ const STEP_COMPONENTS = {
 
 const title = computed(() => (state.step === 'quality' && state.type === 'photo' ? 'Level of Detail' : TITLES[state.step]));
 const stepIndex = computed(() => steps.value.indexOf(state.step));
-const canNext = computed(() => state.step !== 'palette' || state.palette.length >= 2);
+const canNext = computed(() => state.step !== 'palette' || (!state.suggesting && state.palette.length >= 2));
 
 // Drop an image anywhere, at any time.
 const dragging = ref(false);

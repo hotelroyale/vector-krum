@@ -22,7 +22,7 @@ function choose(colors: Color[]) {
 }
 
 function add() {
-  if (state.palette.length >= MAX) return;
+  if (state.suggesting || state.palette.length >= MAX) return;
   state.palette.push([0.5, 0.5, 0.5, 1]);
   state.activeSwatch = state.palette.length - 1;
 }
@@ -47,7 +47,10 @@ const activeHex = computed({
   <div class="palette-step">
     <section>
       <h2 class="section-title">Suggested palettes</h2>
-      <p v-if="state.suggesting" class="hint">Finding palettes…</p>
+      <div v-if="state.suggesting" class="loading" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true" />
+        <span>Finding palettes…</span>
+      </div>
       <p v-else-if="!state.suggestions.length" class="hint">No suggestions for this image.</p>
       <ul v-else ref="list" class="suggestions">
         <li v-for="(s, i) in state.suggestions" :key="i">
@@ -60,26 +63,28 @@ const activeHex = computed({
       <p class="hint">Click a palette to use it. ★ marks the best fit.</p>
     </section>
 
-    <section>
+    <section :class="{ inactive: state.suggesting }" :aria-busy="state.suggesting">
       <h2 class="section-title">Custom palette</h2>
       <div class="custom">
         <button
           v-for="(c, i) in state.palette"
           :key="i"
           class="swatch-btn"
+          :disabled="state.suggesting"
           :aria-label="`Color ${i + 1}: ${toHexColor(c)}`"
           @click="state.activeSwatch = state.activeSwatch === i ? -1 : i"
         >
           <Swatch :color="c" :size="28" :active="state.activeSwatch === i" />
         </button>
-        <button class="btn small add" :disabled="state.palette.length >= MAX" title="Add a color" @click="add">+</button>
+        <button class="btn small add" :disabled="state.suggesting || state.palette.length >= MAX" title="Add a color" @click="add">+</button>
       </div>
-      <div v-if="state.activeSwatch >= 0" class="editor">
+      <div v-if="!state.suggesting && state.activeSwatch >= 0" class="editor">
         <input v-model="activeHex" type="color" aria-label="Edit color" />
         <code>{{ toHexColor(state.palette[state.activeSwatch]) }}</code>
         <button class="btn small" :disabled="state.palette.length <= 2" @click="remove">Remove</button>
       </div>
-      <p class="hint">
+      <p v-if="state.suggesting" class="hint">Available once the palettes are loaded.</p>
+      <p v-else class="hint">
         {{ state.activeSwatch >= 0 ? 'Click in the image to pick this color, or edit it here.' : 'Select a color to change it.' }}
         {{ state.palette.length < 2 ? 'At least two colors are needed.' : '' }}
       </p>
@@ -95,6 +100,38 @@ const activeHex = computed({
   section {
     display: grid;
     gap: 8px;
+  }
+}
+
+.inactive {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 1turn;
   }
 }
 

@@ -152,19 +152,24 @@ export function startPage() {
 }
 
 /** Suggested palettes for the current type, quality and transparency; the best fit preselected. */
+let suggestRequest = 0;
 export async function loadSuggestions() {
   const key = JSON.stringify([state.type, state.quality, state.transparency]);
   if (state.suggestionsKey === key) return;
+  // A newer request cancels this one; only the latest may end the loading state.
+  const request = ++suggestRequest;
   state.suggesting = true;
+  state.activeSwatch = -1;
   try {
     const palettes = await engine.palettes(state.type, state.quality, transparency());
+    if (request !== suggestRequest) return;
     state.suggestions = palettes;
     state.suggestionsKey = key;
     if (palettes.length && state.palette.length === 0) state.palette = palettes[bestSuggestion.value].colors.map((c) => [...c] as Color);
   } catch (e) {
-    showError(e);
+    if (request === suggestRequest) showError(e);
   } finally {
-    state.suggesting = false;
+    if (request === suggestRequest) state.suggesting = false;
   }
 }
 

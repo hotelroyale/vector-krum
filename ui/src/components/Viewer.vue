@@ -35,7 +35,7 @@ const canVector = computed(() => !!state.result);
 const mode = computed<ViewMode>(() => (canVector.value ? state.view : 'bitmap'));
 const showsVector = computed(() => mode.value !== 'bitmap' && !!vector.value);
 const splitX = computed(() => view.split * view.width);
-const picking = computed(() => state.step === 'palette' && state.activeSwatch >= 0);
+const picking = computed(() => state.step === 'palette' && !state.suggesting && state.activeSwatch >= 0);
 
 function fit() {
   const pad = 32;
